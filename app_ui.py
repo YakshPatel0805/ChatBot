@@ -590,6 +590,23 @@ st.markdown("""
         margin: 1rem 0;
     }
     
+    /* Fixed header container */
+    .fixed-header {
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        background: white;
+        padding: 1rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Chat history container */
+    .chat-history {
+        max-height: calc(100vh - 400px);
+        overflow-y: auto;
+        padding: 1rem 0;
+    }
+    
     </style>
 """, unsafe_allow_html=True)
 
@@ -597,20 +614,9 @@ st.markdown("""
 with st.sidebar:
     st.markdown(f'<div class="sidebar-header">⚙️ Settings</div>', unsafe_allow_html=True)
     
-    language = st.selectbox(
-        "🌍 Select Language:",
-        ["English", "Spanish", "French", "German", "Chinese", "Japanese"],
-        index=0
-    )
-    
-    st.divider()
-    
-    # Real-time data display
-    st.markdown("### 📡 Real-Time Data")
-    rt_data = get_real_time_context()
-    if "Weather" in rt_data:
-        st.success("🌤️ Weather data available")
-    st.info(f"⏰ Time: {datetime.now().strftime('%H:%M:%S')}")
+    # Set English as default language
+    language = "English"
+
     
     # CNN model status
     if st.session_state.image_analysis_mode:
@@ -663,23 +669,7 @@ with st.sidebar:
             st.rerun()
     
     st.divider()
-    
-    # Chat statistics
-    st.markdown("### 📊 Chat Statistics")
-    total_messages = len(st.session_state.messages)
-    user_msgs = sum(1 for m in st.session_state.messages if m["role"] == "user")
-    ai_msgs = sum(1 for m in st.session_state.messages if m["role"] == "assistant")
-    
-    st.metric("Total Messages", total_messages)
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.metric("👤 User", user_msgs)
-    with col_b:
-        st.metric("🤖 AI", ai_msgs)
-    
-    st.text(f"Session: {st.session_state.session_id[:12]}...")
-    
-    st.divider()
+
     
     # Image Upload Section
     st.markdown("### 🖼️ Image Analysis")
@@ -696,13 +686,13 @@ with st.sidebar:
         efficientnet_status = "🟢 Loaded" if efficientnet_model else "🔴 Not available"
         tensorflow_status = "🟢 Available" if TENSORFLOW_AVAILABLE else "🔴 Not installed"
         
-        st.info(f"� **CNN Model 1**: ResNet50 {resnet_status}")
+        st.info(f"⚡ **CNN Model 1**: ResNet50 {resnet_status}")
         st.info(f"⚡ **CNN Model 2**: EfficientNet-B0 {efficientnet_status}")
-        st.info(f"� **Framework**: TensorFlow {tensorflow_status}")
+        st.info(f"⚡**Framework**: TensorFlow {tensorflow_status}")
         
         # Image upload
         uploaded_file = st.file_uploader(
-            "� Upload Image",
+            "Upload Image",
             type=['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'],
             help="Upload an image to analyze with CNN models",
             key=f"image_uploader_{st.session_state.upload_key}"
@@ -774,66 +764,77 @@ with st.sidebar:
     - AI-powered comprehensive object information
     """)
 
-# Main Chat Area
-st.markdown("""
-<div class="title-main">
-    <h1>🤖 AI ChatBot with Dual CNN & Web Research</h1>
-    <p>Intelligent assistant powered by Groq + ResNet50 + EfficientNet-B0 + Web Research - Fast, Accurate, Real-Time Aware + Advanced CNN Image Classification with Internet-based Information</p>
-</div>
-""", unsafe_allow_html=True)
+# Main Chat Area - Fixed Header
+with st.container():
+    st.markdown("""
+    <div class="title-main">
+        <h1>🤖 AI ChatBot with Dual CNN & Web Research</h1>
+        <p>Intelligent assistant powered by Groq + ResNet50 + EfficientNet-B0 + Web Research - Fast, Accurate, Real-Time Aware + Advanced CNN Image Classification with Internet-based Information</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-# Display real-time status
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.metric("📅 Current Time", datetime.now().strftime("%H:%M:%S"))
-with col2:
-    st.metric("📆 Date", datetime.now().strftime("%Y-%m-%d"))
-with col3:
-    status = "✅ Online" if os.getenv("GROQ_API_KEY") else "❌ No API Key"
-    st.metric("🔌 Status", status)
-with col4:
+    # Display real-time status
+    col1, col2 = st.columns(2)
+    with col1:
+        status = "✅ Online" if os.getenv("GROQ_API_KEY") else "❌ No API Key"
+        st.metric("🔌 Status", status)
+    with col2:
+        if st.session_state.image_analysis_mode:
+            cnn_count = sum([resnet_model is not None, efficientnet_model is not None])
+            if cnn_count == 2:
+                vision_status = "🔍 Dual CNN ON"
+            elif cnn_count == 1:
+                vision_status = "🔍 Single CNN ON"
+            else:
+                vision_status = "❌ No CNN Models"
+        else:
+            vision_status = "💬 Text Mode"
+        st.metric("🤖 Mode", vision_status)
+
+    # CNN mode indicator
     if st.session_state.image_analysis_mode:
         cnn_count = sum([resnet_model is not None, efficientnet_model is not None])
         if cnn_count == 2:
-            vision_status = "🔍 Dual CNN ON"
+            st.markdown("""
+            <div class="vision-mode">
+                🔍 DUAL CNN MODE ACTIVE - Upload images for ResNet50 + EfficientNet-B0 classification!
+            </div>
+            """, unsafe_allow_html=True)
         elif cnn_count == 1:
-            vision_status = "� Single CNN ON"
+            st.markdown("""
+            <div class="vision-mode">
+                🔍 SINGLE CNN MODE ACTIVE - Upload images for CNN classification!
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            vision_status = "❌ No CNN Models"
-    else:
-        vision_status = "💬 Text Mode"
-    st.metric("🤖 Mode", vision_status)
+            st.markdown("""
+            <div class="vision-mode">
+                ❌ NO CNN MODELS AVAILABLE - Please install TensorFlow and restart the application!
+            </div>
+            """, unsafe_allow_html=True)
 
-# CNN mode indicator
-if st.session_state.image_analysis_mode:
-    cnn_count = sum([resnet_model is not None, efficientnet_model is not None])
-    if cnn_count == 2:
-        st.markdown("""
-        <div class="vision-mode">
-            🔍 DUAL CNN MODE ACTIVE - Upload images for ResNet50 + EfficientNet-B0 classification!
-        </div>
-        """, unsafe_allow_html=True)
-    elif cnn_count == 1:
-        st.markdown("""
-        <div class="vision-mode">
-            🔍 SINGLE CNN MODE ACTIVE - Upload images for CNN classification!
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div class="vision-mode">
-            ❌ NO CNN MODELS AVAILABLE - Please install TensorFlow and restart the application!
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown("""
-        <div class="vision-mode">
-            🎯 TRIPLE VISION MODE ACTIVE - Upload images for AI analysis!
-        </div>
-        """, unsafe_allow_html=True)
+    st.divider()
 
+    # Input area - Fixed at top
+    col_input, col_send = st.columns([0.95, 0.05])
+
+    with col_input:
+        if st.session_state.image_analysis_mode and "current_image" in st.session_state:
+            user_input = st.chat_input(
+                f"🔍 Ask about the classified image: {st.session_state.current_image_name}",
+                key="user_input",
+                max_chars=2000
+            )
+        else:
+            user_input = st.chat_input(
+                "💬 Type your message here (real-time data will be included)...",
+                key="user_input",
+                max_chars=2000
+            )
+
+# Display chat history (scrollable area below fixed input)
 st.divider()
 
-# Display chat history
 with st.container():
     for msg in st.session_state.messages:
         if msg["role"] == "user":
@@ -845,25 +846,6 @@ with st.container():
         else:
             with st.chat_message("assistant", avatar="🤖"):
                 st.markdown(msg["content"])
-
-# Input area
-st.divider()
-
-col_input, col_send = st.columns([0.95, 0.05])
-
-with col_input:
-    if st.session_state.image_analysis_mode and "current_image" in st.session_state:
-        user_input = st.chat_input(
-            f"🔍 Ask about the classified image: {st.session_state.current_image_name}",
-            key="user_input",
-            max_chars=2000
-        )
-    else:
-        user_input = st.chat_input(
-            "�💬 Type your message here (real-time data will be included)...",
-            key="user_input",
-            max_chars=2000
-        )
 
 # Process user input
 if user_input:
@@ -886,6 +868,7 @@ if user_input:
     
     # Get AI response
     with st.chat_message("assistant", avatar="🤖"):
+        # language = 'English'
         if has_image:
             # Use CNN models with web research for comprehensive image analysis
             with st.spinner("🔍 Analyzing image with CNN models and web research..."):
@@ -952,6 +935,5 @@ st.markdown(
 )
 
 
-
 # To run this application:
-# streamlit run app_ui.py
+# streamlit run filename.py
